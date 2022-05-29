@@ -3,7 +3,7 @@
 // ==> can easily run cut_enumeration from there
 
 use std::fs;
-//use std::env;
+type Cut_t = Vec<u16>;
 
 fn main() {
     let contents = fs::read_to_string("test.txt")
@@ -56,7 +56,7 @@ fn find_PI_and_GATES(NTK: &Vec<Vec<u16>>) -> (Vec<u16>, Vec<u16>) {
     return (primary_inputs, gates);
 }
 
-fn dominates(cut1: &Vec<u16>, cut2: &Vec<u16>) -> bool {
+fn dominates(cut1: &Cut_t, cut2: &Cut_t) -> bool {
     if cut1.len() >= cut2.len() {
         for i in cut2 {
             if !(cut1.contains(&i)) {
@@ -69,7 +69,7 @@ fn dominates(cut1: &Vec<u16>, cut2: &Vec<u16>) -> bool {
 }
 
 
-fn is_dominated(cut: &Vec<u16>, set_of_cuts: &Vec<Vec<u16>>) -> bool {
+fn is_dominated(cut: &Cut_t, set_of_cuts: &Vec<Cut_t>) -> bool {
     for cut1 in set_of_cuts {
         if dominates(cut1, cut) {
             return true;
@@ -78,7 +78,7 @@ fn is_dominated(cut: &Vec<u16>, set_of_cuts: &Vec<Vec<u16>>) -> bool {
     return false;
 }
 
-fn add_and_remove_dominated(cut: &Vec<u16>, set_of_cuts: &mut Vec<Vec<u16>>) {
+fn add_and_remove_dominated(cut: &Cut_t, set_of_cuts: &mut Vec<Cut_t>) {
     let mut new_set = Vec::new();
     new_set.push(cut.clone());
     for i in 0..set_of_cuts.len() {
@@ -89,7 +89,7 @@ fn add_and_remove_dominated(cut: &Vec<u16>, set_of_cuts: &mut Vec<Vec<u16>>) {
     *set_of_cuts = new_set.clone();
 }
 
-fn union(a: &Vec<u16>, b: &Vec<u16>) -> Vec<u16> {
+fn union(a: &Cut_t, b: &Cut_t) -> Cut_t {
     let mut ret = a.clone();
     for i in b {
         if !ret.contains(&i) {
@@ -101,20 +101,20 @@ fn union(a: &Vec<u16>, b: &Vec<u16>) -> Vec<u16> {
 }
 
 fn build_cuts(NTK: &Vec<Vec<u16>>, PI: &Vec<u16>, GATES: &Vec<u16>, k: usize) {
-    let mut CUTS: Vec<Vec<Vec<u16>>> = vec![Vec::new(); NTK.len()];
+    let mut CUTS: Vec<Vec<Cut_t>> = vec![Vec::new(); NTK.len()];
 
     struct Rec<'s> {
-        f: &'s dyn Fn(&Rec, usize, usize, Vec<u16>, usize, &mut  Vec<Vec<Vec<u16>>>)
+        f: &'s dyn Fn(&Rec, usize, usize, Cut_t, usize, &mut  Vec<Vec<Cut_t>>)
     }
 
     let rec = Rec {
-        f: &|rec: &Rec, nmb, end, curr: Vec<u16>, index, cuts| {
+        f: &|rec: &Rec, nmb, end, curr: Cut_t, index, cuts| {
             if nmb == end {
                 if curr.len() <= k && !is_dominated(&curr, &cuts[index]) {
                     add_and_remove_dominated(&curr, &mut cuts[index]);
                 }
             } else {
-                let step: Vec<u16> = NTK[index].clone();
+                let step: Cut_t = NTK[index].clone();
                 let fanin: usize = usize::from(step[nmb]);
                 let fanin_cuts = cuts[fanin].clone();
                 for cut in fanin_cuts {
@@ -136,7 +136,7 @@ fn build_cuts(NTK: &Vec<Vec<u16>>, PI: &Vec<u16>, GATES: &Vec<u16>, k: usize) {
 
         (rec.f)(&rec, 0, NTK[j].len(), Vec::new(), j, &mut CUTS);
 
-        let mut me: Vec<u16> = Vec::new();
+        let mut me: Cut_t = Vec::new();
         me.push(*i);
         CUTS[j].push(me.clone());
     }
