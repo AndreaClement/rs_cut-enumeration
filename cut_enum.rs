@@ -16,6 +16,7 @@ fn main() {
     for node in &NTK {
         println!("{:?}", node);
     }
+    println!("\n");
 
     println!("{:?}", PI);
     println!("{:?}", GATES);
@@ -28,6 +29,7 @@ fn main() {
 fn convert_to_table(split: Vec<&str>) -> Vec<Vec<u16>> {
     let mut ntk = Vec::with_capacity(split.len());
     for i in 0..(split.len() - 1) {
+
         let mut fanins: Vec<u16> = Vec::new();
         for elem in split[i].split(',') {
             if elem.len() > 0 {
@@ -45,7 +47,7 @@ fn find_PI_and_GATES(NTK: &Vec<Vec<u16>>) -> (Vec<u16>, Vec<u16>) {
     let mut primary_inputs = Vec::new();
     let mut gates          = Vec::new();
 
-    for i in 0..(NTK.len() - 1) {
+    for i in 0..(NTK.len()) {
         if NTK[i].is_empty() {
             primary_inputs.push(i as u16);
         } else {
@@ -57,9 +59,10 @@ fn find_PI_and_GATES(NTK: &Vec<Vec<u16>>) -> (Vec<u16>, Vec<u16>) {
 }
 
 fn dominates(cut1: &Cut_t, cut2: &Cut_t) -> bool {
-    if cut1.len() >= cut2.len() {
-        for i in cut2 {
-            if !(cut1.contains(&i)) {
+    // AKA cut1 dominates if it belongs to cut2
+    if cut1.len() <= cut2.len() {
+        for i in cut1 {
+            if !(cut2.contains(&i)) {
                 return false;
             }
         }
@@ -91,9 +94,10 @@ fn add_and_remove_dominated(cut: &Cut_t, set_of_cuts: &mut Vec<Cut_t>) {
 
 fn union(a: &Cut_t, b: &Cut_t) -> Cut_t {
     let mut ret = a.clone();
-    for i in b {
+    let step_b = b.clone();
+    for i in step_b {
         if !ret.contains(&i) {
-            ret.push(*i);
+            ret.push(i);
         }
     }
 
@@ -114,9 +118,11 @@ fn build_cuts(NTK: &Vec<Vec<u16>>, PI: &Vec<u16>, GATES: &Vec<u16>, k: usize) {
                     add_and_remove_dominated(&curr, &mut cuts[index]);
                 }
             } else {
-                let step: Cut_t = NTK[index].clone();
-                let fanin: usize = usize::from(step[nmb]);
+                let my_fanins: Cut_t = NTK[index].clone();
+
+                let fanin: usize = usize::from(my_fanins[nmb]);
                 let fanin_cuts = cuts[fanin].clone();
+
                 for cut in fanin_cuts {
                     (rec.f)(&rec, nmb + 1, end, union(&curr, &cut), index, cuts);
                 }
